@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>நாம் தமிழர் கட்சி - SIR வாக்காளர் சரிபார்ப்பு</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            
+            body {
+                background: white !important;
+                margin: 0;
+                padding: 20px;
+            }
+            
+            .print-section {
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+                margin: 10px 0 !important;
+                padding: 15px !important;
+                page-break-inside: avoid;
+            }
+            
+            img {
+                max-width: 100% !important;
+                max-height: 300px !important;
+            }
+            
+            button {
+                display: none !important;
+            }
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .visible {
+            display: block !important;
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        /* Custom Tamil font support */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Admin access */
+        .admin-access {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .admin-access button {
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            color: #dc2626;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .admin-access button:hover {
+            background: rgba(220, 38, 38, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-green-50 to-yellow-50 min-h-screen p-4 md:p-6">
+    <!-- Admin Access Button (Hidden by default) -->
+    <div id="adminAccess" class="admin-access hidden">
+        <button onclick="showAdminPanel()">
+            <i data-lucide="shield" class="w-3 h-3 inline mr-1"></i>
+            Admin
+        </button>
+    </div>
+
+    <!-- Rejection Reason Modal -->
+    <div id="rejectionModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="mb-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i data-lucide="x-circle" class="w-6 h-6 text-red-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-red-700">நிராகரிப்பதற்கான காரணம்</h2>
+                </div>
+                <p class="text-gray-600 mb-4">நிராகரிப்பதற்கான காரணத்தை உள்ளிடவும்:</p>
+                <textarea 
+                    id="rejectionReason" 
+                    rows="4" 
+                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+                    placeholder="எ.கா: ஆவணங்கள் தெளிவாக இல்லை, தகவல்கள் பொருத்தமில்லை, முதலியன..."
+                ></textarea>
+                <p id="rejectionError" class="text-red-600 text-sm mt-2 hidden">காரணத்தை உள்ளிடவும்</p>
+            </div>
+            <div class="flex gap-3 justify-end">
+                <button
+                    id="cancelRejection"
+                    class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                    ரத்து செய்
+                </button>
+                <button
+                    id="confirmRejection"
+                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                >
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    நிராகரி
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Interface -->
+    <div id="app" class="visible">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header with Party Name -->
+            <div class="bg-white rounded-xl shadow-2xl p-6 mb-8 border-l-8 border-green-600">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                    <div class="text-center md:text-left mb-4 md:mb-0">
+                        <div class="flex items-center justify-center md:justify-start gap-3 mb-2">
+                            <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold text-xl">ந</span>
+                            </div>
+                            <h1 class="text-3xl md:text-4xl font-bold text-green-800">
+                                நாம் தமிழர் கட்சி
+                            </h1>
+                        </div>
+                        <p class="text-xl text-gray-700">வாக்காளர் சரிபார்ப்பு & பதிவு மையம்</p>
+                    </div>
+                    <button
+                        id="adminToggle"
+                        class="px-6 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 transition-colors font-semibold shadow-md no-print flex items-center gap-2 hidden"
+                    >
+                        <i data-lucide="shield-check" class="w-5 h-5"></i>
+                        நிர்வாகி பக்கம்
+                    </button>
+                </div>
+                <div class="text-center">
+                    <p class="text-lg text-gray-600 italic">"நாம் தமிழர் - நமது உரிமை"</p>
+                </div>
+            </div>
+
+            <!-- Success Message -->
+            <div id="successMessage" class="hidden bg-gradient-to-r from-green-50 to-emerald-100 border-2 border-green-500 rounded-xl p-6 mb-8">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                        <i data-lucide="check-circle" class="w-10 h-10 text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-green-800">விண்ணப்பம் வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது!</h2>
+                        <p class="text-gray-700 mt-1">நாம் தமிழர் கட்சி - மக்கள் சேவை பிரிவு</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg p-6 mb-6">
+                    <p class="text-lg mb-2">உங்கள் பதிவு அடையாள எண்:</p>
+                    <p id="regIdDisplay" class="text-4xl font-bold text-green-700 mb-4 text-center tracking-wider"></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">பதிவு செய்த தேதி</p>
+                            <p id="regDate" class="font-semibold"></p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 mb-1">நிலை</p>
+                            <p class="font-semibold text-yellow-600">சரிபார்க்கப்படுகிறது</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-700">இந்த எண்ணை பாதுகாப்பாக குறித்து வைக்கவும். உங்கள் பதிவு நிலை பற்றிய விவரம் வாட்ஸ்அப் மூலம் உங்கள் தொலைபேசி எண்ணுக்கு அனுப்பப்படும்.</p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button
+                        id="newSearchBtn"
+                        class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold shadow-md flex-1 no-print flex items-center justify-center gap-2"
+                    >
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                        புதிய தேடல்
+                    </button>
+                    <button
+                        id="homeBtn"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md flex-1 no-print flex items-center justify-center gap-2"
+                    >
+                        <i data-lucide="home" class="w-5 h-5"></i>
+                        முகப்பு பக்கம்
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div id="mainContent" class="visible">
+                <!-- Search Section -->
+                <div class="bg-white rounded-xl shadow-xl p-6 mb-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="search" class="w-6 h-6 text-green-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800">வாக்காளர் எண் சரிபார்ப்பு</h2>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i data-lucide="id-card" class="inline mr-2 w-4 h-4"></i>
+                                வாக்காளர் அடையாள எண்
+                            </label>
+                            <input
+                                id="voterNumberInput"
+                                type="text"
+                                placeholder="உங்கள் வாக்காளர் எண்ணை இங்கு உள்ளிடவும்"
+                                class="w-full px-4 py-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 text-lg"
+                            />
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button
+                                id="searchBtn"
+                                class="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg shadow-lg flex items-center justify-center gap-3 flex-1 no-print"
+                            >
+                                <i data-lucide="search" class="w-6 h-6"></i>
+                                வாக்காளர் தகவல் சரிபார்
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Result -->
+                <div id="searchResult" class="hidden bg-white rounded-xl shadow-xl p-6 mb-8 print-section">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                                <i data-lucide="check-circle" class="w-8 h-8 text-green-600"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl md:text-3xl font-bold text-green-700">வாக்காளர் பதிவு காணப்பட்டது!</h2>
+                                <p class="text-gray-600">நாம் தமிழர் கட்சி - சரிபார்க்கப்பட்ட பதிவு</p>
+                            </div>
+                        </div>
+                        <button
+                            id="printBtn"
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md flex items-center gap-2 no-print"
+                        >
+                            <i data-lucide="printer" class="w-5 h-5"></i>
+                            அச்சிடு / PDF
+                        </button>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-8 mb-8">
+                        <div class="md:col-span-2 space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-600 mb-1">வாக்காளர் எண்</p>
+                                    <p id="resultVoterNumber" class="text-2xl font-bold text-gray-800"></p>
+                                </div>
+                                <div class="bg-gray-50 p-4 rounded-lg">
+                                    <p class="text-sm text-gray-600 mb-1">கைபேசி எண்</p>
+                                    <p id="resultMobile" class="text-2xl font-bold text-gray-800"></p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">பதிவு செய்த தேதி</p>
+                                <p id="resultDate" class="text-xl font-semibold text-gray-800"></p>
+                            </div>
+                            
+                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <i data-lucide="badge-check" class="w-5 h-5 text-green-600"></i>
+                                    <p class="font-semibold text-green-800">நிலை: <span class="text-green-600">சரிபார்க்கப்பட்டது</span></p>
+                                </div>
+                                <p class="text-gray-700">இந்த வாக்காளர் நாம் தமிழர் கட்சி வாக்காளர் தரவுத்தளத்தில் சரிபார்க்கப்பட்டுள்ளார்.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col items-center">
+                            <div class="mb-4">
+                                <p class="text-sm text-gray-600 mb-2 text-center">புகைப்படம்</p>
+                                <img id="resultPhoto" src="" alt="வாக்காளர் புகைப்படம்" 
+                                     class="w-48 h-48 object-cover rounded-xl border-4 border-white shadow-lg mx-auto" />
+                            </div>
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600">நாம் தமிழர் கட்சி</p>
+                                <p class="font-semibold text-green-700">சரிபார்க்கப்பட்ட வாக்காளர்</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i data-lucide="credit-card" class="w-4 h-4"></i>
+                                வாக்காளர் அட்டை
+                            </p>
+                            <img id="resultVoterCard" src="" alt="வாக்காளர் அட்டை" 
+                                 class="w-full h-56 object-contain bg-gray-100 rounded-lg border p-2" />
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i data-lucide="file-text" class="w-4 h-4"></i>
+                                ஆதார் அட்டை
+                            </p>
+                            <img id="resultAadharCard" src="" alt="ஆதார் அட்டை" 
+                                 class="w-full h-56 object-contain bg-gray-100 rounded-lg border p-2" />
+                        </div>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center">
+                        <p class="text-gray-700">
+                            <i data-lucide="info" class="inline w-4 h-4 mr-2"></i>
+                            இந்த ஆவணம் நாம் தமிழர் கட்சி வாக்காளர் சரிபார்ப்பு முறைமையின் அங்கீகரிக்கப்பட்ட பதிவாகும்.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Upload Form -->
+                <div id="uploadForm" class="hidden bg-white rounded-xl shadow-xl p-6">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                            <i data-lucide="user-plus" class="w-8 h-8 text-red-600"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl md:text-3xl font-bold text-red-700">புதிய வாக்காளர் பதிவு</h2>
+                            <p class="text-gray-600">நாம் தமிழர் கட்சி வாக்காளர் தரவுத்தளத்தில் பதிவு செய்யவும்</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i data-lucide="user" class="inline mr-2 w-4 h-4"></i>
+                                    வாக்காளர் எண் *
+                                </label>
+                                <input
+                                    id="uploadVoterNumber"
+                                    type="text"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                                    placeholder="வாக்காளர் எண்ணை உள்ளிடவும்"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i data-lucide="phone" class="inline mr-2 w-4 h-4"></i>
+                                    கைபேசி எண் *
+                                </label>
+                                <input
+                                    id="uploadMobile"
+                                    type="tel"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                                    placeholder="கைபேசி எண்ணை உள்ளிடவும்"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i data-lucide="credit-card" class="inline mr-2 w-4 h-4"></i>
+                                    வாக்காளர் அட்டை *
+                                </label>
+                                <input
+                                    id="voterCardFile"
+                                    type="file"
+                                    accept="image/*"
+                                    class="w-full px-3 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 transition-colors"
+                                />
+                                <div id="voterCardPreview" class="mt-3"></div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i data-lucide="file-text" class="inline mr-2 w-4 h-4"></i>
+                                    ஆதார் அட்டை *
+                                </label>
+                                <input
+                                    id="aadharCardFile"
+                                    type="file"
+                                    accept="image/*"
+                                    class="w-full px-3 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 transition-colors"
+                                />
+                                <div id="aadharCardPreview" class="mt-3"></div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i data-lucide="image" class="inline mr-2 w-4 h-4"></i>
+                                    புகைப்படம் *
+                                </label>
+                                <input
+                                    id="photoFile"
+                                    type="file"
+                                    accept="image/*"
+                                    class="w-full px-3 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-400 transition-colors"
+                                />
+                                <div id="photoPreview" class="mt-3"></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-start gap-3">
+                                <i data-lucide="alert-circle" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                <div>
+                                    <p class="font-semibold text-blue-800 mb-1">முக்கிய குறிப்பு:</p>
+                                    <ul class="text-gray-700 list-disc pl-5 space-y-1">
+                                        <li>அனைத்து படங்களும் தெளிவாக இருக்க வேண்டும்</li>
+                                        <li>அனைத்து தகவல்களும் சரியாக இருக்க வேண்டும்</li>
+                                        <li>பதிவு செய்த பிறகு வாட்ஸ்அப் மூலம் உறுதிப்படுத்தல் கிடைக்கும்</li>
+                                        <li>பிழையான தகவல் அளித்தால் பதிவு நிராகரிக்கப்படும்</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            id="submitBtn"
+                            class="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white text-lg font-semibold rounded-lg hover:from-green-700 hover:to-green-800 transition-all shadow-lg flex items-center justify-center gap-3 no-print"
+                        >
+                            <i data-lucide="upload" class="w-6 h-6"></i>
+                            நாம் தமிழர் கட்சியில் வாக்காளராக பதிவு செய்க
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="mt-12 pt-8 border-t border-gray-200 text-center text-gray-600">
+                <p class="mb-2">© 2024 நாம் தமிழர் கட்சி - வாக்காளர் சேவைகள். அனைத்து உரிமைகளும் பாதுகாக்கப்பட்டவை.</p>
+                <p class="text-sm">இந்த தளம் வாக்காளர் சேவைகளுக்காக மட்டுமே. தொழிநுட்ப ஆதரவு: SIR மையம்</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="bg-white rounded-xl shadow-2xl p-6 mb-8 border-l-8 border-red-600">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-8 h-8 text-red-600"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl md:text-4xl font-bold text-red-800">நாம் தமிழர் கட்சி - நிர்வாகி பேனல்</h1>
+                            <p class="text-gray-600">வாக்காளர் பதிவு மேலாண்மை மையம்</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button
+                            id="userPageBtn"
+                            class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold shadow-md flex items-center gap-2"
+                        >
+                            <i data-lucide="home" class="w-5 h-5"></i>
+                            பயனர் பக்கம்
+                        </button>
+                        <button
+                            id="generateReport"
+                            class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold shadow-md flex items-center gap-2"
+                        >
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                            அறிக்கை (PDF)
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">மொத்த பதிவுகள்</p>
+                                <p id="totalVoters" class="text-3xl font-bold text-gray-800">0</p>
+                            </div>
+                            <i data-lucide="users" class="w-8 h-8 text-green-600"></i>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">நிலுவை விண்ணப்பங்கள்</p>
+                                <p id="pendingCount" class="text-3xl font-bold text-gray-800">0</p>
+                            </div>
+                            <i data-lucide="clock" class="w-8 h-8 text-yellow-600"></i>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">இன்றைய பதிவுகள்</p>
+                                <p id="todayCount" class="text-3xl font-bold text-gray-800">0</p>
+                            </div>
+                            <i data-lucide="calendar" class="w-8 h-8 text-blue-600"></i>
+                        </div>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">நிராகரிக்கப்பட்டவை</p>
+                                <p id="rejectedCount" class="text-3xl font-bold text-gray-800">0</p>
+                            </div>
+                            <i data-lucide="x-circle" class="w-8 h-8 text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-xl p-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">நிலுவையில் உள்ள விண்ணப்பங்கள்</h2>
+                        <p class="text-gray-600">அங்கீகாரத்திற்காக காத்திருக்கும் விண்ணப்பங்கள்</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span id="pendingBadge" class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full font-semibold">0</span>
+                        <button
+                            id="refreshBtn"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2"
+                        >
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            புதுப்பிப்பு
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="pendingApplications">
+                    <div id="noApplications" class="text-center py-16">
+                        <i data-lucide="inbox" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                        <p class="text-gray-500 text-xl mb-2">நிலுவையில் விண்ணப்பங்கள் இல்லை</p>
+                        <p class="text-gray-400">அனைத்து விண்ணப்பங்களும் செயலாக்கப்பட்டுள்ளன</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approved Voters Table -->
+            <div class="bg-white rounded-xl shadow-xl p-6 mt-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">அங்கீகரிக்கப்பட்ட வாக்காளர்கள்</h2>
+                        <p class="text-gray-600">நாம் தமிழர் கட்சி தரவுத்தளத்தில் உள்ள அனைத்து வாக்காளர்கள்</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <input
+                            type="text"
+                            id="voterSearch"
+                            placeholder="வாக்காளர் எண் அல்லது தொலைபேசி எண்"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                        />
+                        <button
+                            id="exportAll"
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
+                        >
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            PDF ஏற்றுமதி
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="approvedVoters" class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">வாக்காளர் எண்</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">கைபேசி எண்</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">பதிவு தேதி</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">நிலை</th>
+                                <th class="py-3 px-4 text-left text-sm font-semibold text-gray-700">செயல்கள்</th>
+                            </tr>
+                        </thead>
+                        <tbody id="votersTableBody">
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-gray-500">
+                                    அங்கீகரிக்கப்பட்ட வாக்காளர்கள் இல்லை
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // State management
+        let voters = {};
+        let pendingApplications = {};
+        let rejectedApplications = {};
+        let isAdmin = false;
+        let currentRegistrationId = '';
+        let currentRejectRegId = null;
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeData();
+            setupEventListeners();
+            checkAdminAccess();
+            
+            // Refresh icons after DOM is loaded
+            setTimeout(() => lucide.createIcons(), 100);
+        });
+
+        // Check admin access from URL
+        function checkAdminAccess() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const adminParam = urlParams.get('admin');
+            const adminKey = urlParams.get('key');
+            
+            // Check for admin access
+            if (adminParam === 'true' || adminKey === 'tamiladmin2024') {
+                // Show admin access button
+                document.getElementById('adminAccess').classList.remove('hidden');
+                
+                // If admin key is provided, show admin panel directly
+                if (adminKey === 'tamiladmin2024') {
+                    showAdminPanel();
+                }
+            }
+        }
+
+        // Initialize data from localStorage
+        function initializeData() {
+            try {
+                const savedVoters = localStorage.getItem('voters');
+                const savedPending = localStorage.getItem('pendingApplications');
+                const savedRejected = localStorage.getItem('rejectedApplications');
+                
+                voters = savedVoters ? JSON.parse(savedVoters) : {};
+                pendingApplications = savedPending ? JSON.parse(savedPending) : {};
+                rejectedApplications = savedRejected ? JSON.parse(savedRejected) : {};
+                
+                updateStats();
+                if (isAdmin) {
+                    updateAdminPanel();
+                    updateVotersTable();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                voters = {};
+                pendingApplications = {};
+                rejectedApplications = {};
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            const totalVoters = Object.keys(voters).length;
+            const pendingCount = Object.keys(pendingApplications).length;
+            const rejectedCount = Object.keys(rejectedApplications).length;
+            const today = new Date().toLocaleDateString('ta-IN');
+            let todayCount = 0;
+            
+            // Count today's registrations
+            for (const voter of Object.values(voters)) {
+                if (voter.registeredDate && voter.registeredDate.includes(today.split(',')[0])) {
+                    todayCount++;
+                }
+            }
+            
+            // Update UI if elements exist
+            const totalEl = document.getElementById('totalVoters');
+            const pendingEl = document.getElementById('pendingCount');
+            const todayEl = document.getElementById('todayCount');
+            const rejectedEl = document.getElementById('rejectedCount');
+            const badgeEl = document.getElementById('pendingBadge');
+            
+            if (totalEl) totalEl.textContent = totalVoters;
+            if (pendingEl) pendingEl.textContent = pendingCount;
+            if (todayEl) todayEl.textContent = todayCount;
+            if (rejectedEl) rejectedEl.textContent = rejectedCount;
+            if (badgeEl) badgeEl.textContent = pendingCount;
+        }
+
+        // Save data to localStorage
+        function saveToStorage() {
+            try {
+                localStorage.setItem('voters', JSON.stringify(voters));
+                localStorage.setItem('pendingApplications', JSON.stringify(pendingApplications));
+                localStorage.setItem('rejectedApplications', JSON.stringify(rejectedApplications));
+                updateStats();
+            } catch (error) {
+                console.error('Error saving data:', error);
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search button
+            const searchBtn = document.getElementById('searchBtn');
+            if (searchBtn) {
+                searchBtn.addEventListener('click', handleSearch);
+            }
+            
+            // User page button
+            const userPageBtn = document.getElementById('userPageBtn');
+            if (userPageBtn) {
+                userPageBtn.addEventListener('click', showUserPage);
+            }
+            
+            // Refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    initializeData();
+                    if (isAdmin) {
+                        updateAdminPanel();
+                        updateVotersTable();
+                    }
+                });
+            }
+            
+            // New search button
+            const newSearchBtn = document.getElementById('newSearchBtn');
+            if (newSearchBtn) {
+                newSearchBtn.addEventListener('click', resetApplication);
+            }
+            
+            // Home button
+            const homeBtn = document.getElementById('homeBtn');
+            if (homeBtn) {
+                homeBtn.addEventListener('click', showUserPage);
+            }
+            
+            // Print button
+            const printBtn = document.getElementById('printBtn');
+            if (printBtn) {
+                printBtn.addEventListener('click', () => window.print());
+            }
+            
+            // File upload previews
+            setupFilePreview('voterCardFile', 'voterCardPreview');
+            setupFilePreview('aadharCardFile', 'aadharCardPreview');
+            setupFilePreview('photoFile', 'photoPreview');
+            
+            // Submit application
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.addEventListener('click', handleSubmitApplication);
+            }
+            
+            // Enter key for search
+            const voterInput = document.getElementById('voterNumberInput');
+            if (voterInput) {
+                voterInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        handleSearch();
+                    }
+                });
+            }
+            
+            // Generate report button
+            const generateReportBtn = document.getElementById('generateReport');
+            if (generateReportBtn) {
+                generateReportBtn.addEventListener('click', generateFullReport);
+            }
+            
+            // Export all button
+            const exportAllBtn = document.getElementById('exportAll');
+            if (exportAllBtn) {
+                exportAllBtn.addEventListener('click', exportAllVotersPDF);
+            }
+            
+            // Voter search
+            const voterSearch = document.getElementById('voterSearch');
+            if (voterSearch) {
+                voterSearch.addEventListener('input', filterVotersTable);
+            }
+            
+            // Rejection modal
+            const cancelRejection = document.getElementById('cancelRejection');
+            const confirmRejection = document.getElementById('confirmRejection');
+            
+            if (cancelRejection) {
+                cancelRejection.addEventListener('click', hideRejectionModal);
+            }
+            
+            if (confirmRejection) {
+                confirmRejection.addEventListener('click', handleConfirmRejection);
+            }
+        }
+
+        // Setup file preview
+        function setupFilePreview(fileInputId, previewDivId) {
+            const fileInput = document.getElementById(fileInputId);
+            if (fileInput) {
+                fileInput.addEventListener('change', function(e) {
+                    handleFilePreview(e, previewDivId);
+                });
+            }
+        }
+
+        // Handle file preview
+        function handleFilePreview(event, previewId) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('பட கோப்புகளை மட்டும் பதிவேற்றவும் (JPG, PNG, etc.)');
+                event.target.value = '';
+                return;
+            }
+            
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('கோப்பு அளவு 5MB ஐ விட கூடுதலாக இருக்கக்கூடாது');
+                event.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                const previewDiv = document.getElementById(previewId);
+                previewDiv.innerHTML = `
+                    <div class="relative">
+                        <img src="${reader.result}" alt="Preview" 
+                             class="w-full h-48 object-contain bg-gray-100 rounded-lg border p-2">
+                        <p class="text-xs text-gray-500 mt-1 text-center">${file.name}</p>
+                    </div>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle search
+        function handleSearch() {
+            const voterNumber = document.getElementById('voterNumberInput').value.trim();
+            
+            if (!voterNumber) {
+                alert('தயவு செய்து வாக்காளர் எண்ணை உள்ளிடவும்');
+                return;
+            }
+            
+            // Hide other sections
+            document.getElementById('uploadForm').classList.add('hidden');
+            document.getElementById('searchResult').classList.add('hidden');
+            
+            if (voters[voterNumber]) {
+                showSearchResult(voters[voterNumber]);
+            } else {
+                showUploadForm(voterNumber);
+            }
+        }
+
+        // Show search result
+        function showSearchResult(voter) {
+            document.getElementById('resultVoterNumber').textContent = voter.voterNumber || 'தகவல் இல்லை';
+            document.getElementById('resultMobile').textContent = voter.mobile || 'தகவல் இல்லை';
+            document.getElementById('resultDate').textContent = voter.registeredDate || 'தகவல் இல்லை';
+            
+            // Set images if they exist
+            const photoEl = document.getElementById('resultPhoto');
+            const voterCardEl = document.getElementById('resultVoterCard');
+            const aadharCardEl = document.getElementById('resultAadharCard');
+            
+            if (voter.photo) photoEl.src = voter.photo;
+            if (voter.voterCard) voterCardEl.src = voter.voterCard;
+            if (voter.aadharCard) aadharCardEl.src = voter.aadharCard;
+            
+            document.getElementById('searchResult').classList.remove('hidden');
+            document.getElementById('uploadForm').classList.add('hidden');
+            
+            // Update voter number in upload form for reference
+            document.getElementById('uploadVoterNumber').value = voter.voterNumber || '';
+        }
+
+        // Show upload form
+        function showUploadForm(voterNumber) {
+            document.getElementById('uploadVoterNumber').value = voterNumber || '';
+            
+            document.getElementById('searchResult').classList.add('hidden');
+            document.getElementById('uploadForm').classList.remove('hidden');
+            
+            // Scroll to form
+            document.getElementById('uploadForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Reset application
+        function resetApplication() {
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('mainContent').classList.remove('hidden');
+            
+            // Clear all forms
+            document.getElementById('voterNumberInput').value = '';
+            document.getElementById('uploadVoterNumber').value = '';
+            document.getElementById('uploadMobile').value = '';
+            
+            // Clear file inputs and previews
+            ['voterCardFile', 'aadharCardFile', 'photoFile'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            
+            ['voterCardPreview', 'aadharCardPreview', 'photoPreview'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+            
+            // Hide result and form
+            document.getElementById('searchResult').classList.add('hidden');
+            document.getElementById('uploadForm').classList.add('hidden');
+            
+            // Focus on search input
+            document.getElementById('voterNumberInput').focus();
+        }
+
+        // Generate registration ID
+        function generateRegistrationId() {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substr(2, 6).toUpperCase();
+            return 'NTR' + timestamp.toString(36).substr(-4).toUpperCase() + random;
+        }
+
+        // Handle submit application
+        async function handleSubmitApplication() {
+            const voterNumber = document.getElementById('uploadVoterNumber').value.trim();
+            const mobile = document.getElementById('uploadMobile').value.trim();
+            
+            const voterCardFile = document.getElementById('voterCardFile').files[0];
+            const aadharCardFile = document.getElementById('aadharCardFile').files[0];
+            const photoFile = document.getElementById('photoFile').files[0];
+            
+            // Validate inputs
+            if (!voterNumber) {
+                alert('வாக்காளர் எண்ணை உள்ளிடவும்');
+                return;
+            }
+            
+            if (!mobile) {
+                alert('கைபேசி எண்ணை உள்ளிடவும்');
+                return;
+            }
+            
+            // Validate mobile number
+            const mobileClean = mobile.replace(/[^0-9]/g, '');
+            if (!/^[0-9]{10}$/.test(mobileClean)) {
+                alert('சரியான 10 இலக்க கைபேசி எண்ணை உள்ளிடவும்');
+                return;
+            }
+            
+            if (!voterCardFile) {
+                alert('வாக்காளர் அட்டை படத்தை பதிவேற்றவும்');
+                return;
+            }
+            
+            if (!aadharCardFile) {
+                alert('ஆதார் அட்டை படத்தை பதிவேற்றவும்');
+                return;
+            }
+            
+            if (!photoFile) {
+                alert('புகைப்படத்தை பதிவேற்றவும்');
+                return;
+            }
+            
+            // Read files as data URLs
+            try {
+                const [voterCardData, aadharCardData, photoData] = await Promise.all([
+                    readFileAsDataURL(voterCardFile),
+                    readFileAsDataURL(aadharCardFile),
+                    readFileAsDataURL(photoFile)
+                ]);
+                
+                const regId = generateRegistrationId();
+                const currentDate = new Date().toLocaleString('ta-IN');
+                
+                const newApplication = {
+                    voterNumber: voterNumber,
+                    mobile: mobileClean,
+                    voterCard: voterCardData,
+                    aadharCard: aadharCardData,
+                    photo: photoData,
+                    registrationId: regId,
+                    submittedDate: currentDate,
+                    status: 'pending'
+                };
+                
+                // Add to pending applications
+                pendingApplications[regId] = newApplication;
+                saveToStorage();
+                updateAdminPanel();
+                
+                // Show success message
+                currentRegistrationId = regId;
+                document.getElementById('regIdDisplay').textContent = regId;
+                document.getElementById('regDate').textContent = currentDate;
+                document.getElementById('successMessage').classList.remove('hidden');
+                document.getElementById('mainContent').classList.add('hidden');
+                
+                // Clear form
+                resetApplication();
+                
+                // Show success alert
+                alert(`விண்ணப்பம் வெற்றிகரமாக சமர்ப்பிக்கப்பட்டது!\n\nஅடையாள எண்: ${regId}\n\nஇந்த எண்ணை குறித்து வைக்கவும்.`);
+                
+            } catch (error) {
+                console.error('Error submitting application:', error);
+                alert('படங்களை பதிவேற்றுவதில் பிழை. மீண்டும் முயற்சிக்கவும்.');
+            }
+        }
+
+        // Read file as data URL
+        function readFileAsDataURL(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Show admin panel
+        function showAdminPanel() {
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('adminPanel').classList.remove('hidden');
+            isAdmin = true;
+            updateAdminPanel();
+            updateVotersTable();
+            // Refresh icons
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        // Show user page
+        function showUserPage() {
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            isAdmin = false;
+            // Refresh icons
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        // Update admin panel
+        function updateAdminPanel() {
+            const container = document.getElementById('pendingApplications');
+            const noApps = document.getElementById('noApplications');
+            
+            if (!container || !noApps) return;
+            
+            const apps = Object.entries(pendingApplications);
+            
+            if (apps.length === 0) {
+                container.innerHTML = '';
+                container.appendChild(noApps);
+                noApps.classList.remove('hidden');
+                return;
+            }
+            
+            noApps.classList.add('hidden');
+            
+            let html = '<div class="space-y-6">';
+            
+            apps.forEach(([regId, app]) => {
+                html += `
+                    <div class="border-2 border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                        <div class="grid md:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">அடையாள எண்</p>
+                                <p class="font-bold text-lg text-blue-700">${regId}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">வாக்காளர் எண்</p>
+                                <p class="font-semibold">${app.voterNumber}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">கைபேசி எண்</p>
+                                <p class="font-semibold">${app.mobile}</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">சமர்ப்பித்த தேதி</p>
+                                <p class="font-semibold">${app.submittedDate}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-3 gap-4 mb-6">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-700 mb-2">வாக்காளர் அட்டை</p>
+                                <img src="${app.voterCard}" alt="Voter Card" 
+                                     class="w-full h-40 object-contain bg-gray-100 rounded-lg border p-2">
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-700 mb-2">ஆதார் அட்டை</p>
+                                <img src="${app.aadharCard}" alt="Aadhar Card" 
+                                     class="w-full h-40 object-contain bg-gray-100 rounded-lg border p-2">
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-gray-700 mb-2">புகைப்படம்</p>
+                                <img src="${app.photo}" alt="Photo" 
+                                     class="w-full h-40 object-contain bg-gray-100 rounded-lg border p-2">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 justify-end">
+                            <button
+                                onclick="showRejectionModal('${regId}')"
+                                class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold flex items-center gap-2"
+                            >
+                                <i data-lucide="x" class="w-5 h-5"></i>
+                                நிராகரி (காரணம்)
+                            </button>
+                            <button
+                                onclick="handleApprove('${regId}')"
+                                class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center gap-2"
+                            >
+                                <i data-lucide="check" class="w-5 h-5"></i>
+                                அங்கீகரி
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            // Refresh icons
+            setTimeout(() => lucide.createIcons(), 100);
+        }
+
+        // Update voters table
+        function updateVotersTable() {
+            const tbody = document.getElementById('votersTableBody');
+            if (!tbody) return;
+            
+            const votersArray = Object.values(voters);
+            
+            if (votersArray.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-gray-500">
+                            அங்கீகரிக்கப்பட்ட வாக்காளர்கள் இல்லை
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            votersArray.forEach(voter => {
+                html += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4">${voter.voterNumber}</td>
+                        <td class="py-3 px-4">${voter.mobile}</td>
+                        <td class="py-3 px-4">${voter.registeredDate}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                அங்கீகரிக்கப்பட்டது
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewVoterDetails('${voter.voterNumber}')" 
+                                    class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+                                விவரங்கள்
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        // Filter voters table
+        function filterVotersTable() {
+            const searchTerm = document.getElementById('voterSearch').value.toLowerCase();
+            const tbody = document.getElementById('votersTableBody');
+            const votersArray = Object.values(voters);
+            
+            if (searchTerm === '') {
+                updateVotersTable();
+                return;
+            }
+            
+            const filteredVoters = votersArray.filter(voter => 
+                voter.voterNumber.toLowerCase().includes(searchTerm) ||
+                voter.mobile.includes(searchTerm)
+            );
+            
+            if (filteredVoters.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-gray-500">
+                            வாக்காளர்கள் காணப்படவில்லை
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let html = '';
+            filteredVoters.forEach(voter => {
+                html += `
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4">${voter.voterNumber}</td>
+                        <td class="py-3 px-4">${voter.mobile}</td>
+                        <td class="py-3 px-4">${voter.registeredDate}</td>
+                        <td class="py-3 px-4">
+                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                அங்கீகரிக்கப்பட்டது
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewVoterDetails('${voter.voterNumber}')" 
+                                    class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
+                                விவரங்கள்
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        // Show rejection modal
+        function showRejectionModal(regId) {
+            currentRejectRegId = regId;
+            document.getElementById('rejectionReason').value = '';
+            document.getElementById('rejectionError').classList.add('hidden');
+            document.getElementById('rejectionModal').classList.remove('hidden');
+        }
+
+        // Hide rejection modal
+        function hideRejectionModal() {
+            currentRejectRegId = null;
+            document.getElementById('rejectionModal').classList.add('hidden');
+        }
+
+        // Handle confirm rejection
+        function handleConfirmRejection() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!reason) {
+                document.getElementById('rejectionError').classList.remove('hidden');
+                return;
+            }
+            
+            if (currentRejectRegId) {
+                handleReject(currentRejectRegId, reason);
+                hideRejectionModal();
+            }
+        }
+
+        // Handle approve application
+        function handleApprove(regId) {
+            if (!confirm('இந்த விண்ணப்பத்தை அங்கீகரிக்க வேண்டுமா?')) return;
+            
+            const application = pendingApplications[regId];
+            
+            const newVoter = {
+                voterNumber: application.voterNumber,
+                mobile: application.mobile,
+                voterCard: application.voterCard,
+                aadharCard: application.aadharCard,
+                photo: application.photo,
+                registeredDate: new Date().toLocaleString('ta-IN'),
+                status: 'approved'
+            };
+            
+            // Add to voters
+            voters[application.voterNumber] = newVoter;
+            
+            // Remove from pending
+            delete pendingApplications[regId];
+            
+            saveToStorage();
+            updateAdminPanel();
+            updateVotersTable();
+            
+            // Send WhatsApp message
+            const whatsappMessage = `நாம் தமிழர் கட்சி - உங்கள் வாக்காளர் பதிவு அங்கீகரிக்கப்பட்டது! 🎉\n\n` +
+                                  `வாக்காளர் எண்: ${application.voterNumber}\n` +
+                                  `அடையாள எண்: ${regId}\n` +
+                                  `நிலை: அங்கீகரிக்கப்பட்டது ✅\n\n` +
+                                  `நன்றி! - நாம் தமிழர் கட்சி வாக்காளர் சேவைகள்`;
+            const whatsappUrl = `https://wa.me/91${application.mobile}?text=${encodeURIComponent(whatsappMessage)}`;
+            window.open(whatsappUrl, '_blank');
+            
+            alert('விண்ணப்பம் அங்கீகரிக்கப்பட்டது மற்றும் வாட்ஸ்அப் செய்தி அனுப்பப்பட்டது.');
+        }
+
+        // Handle reject application
+        function handleReject(regId, reason) {
+            const application = pendingApplications[regId];
+            
+            // Add to rejected applications with reason
+            rejectedApplications[regId] = {
+                ...application,
+                rejectedDate: new Date().toLocaleString('ta-IN'),
+                rejectionReason: reason
+            };
+            
+            // Remove from pending
+            delete pendingApplications[regId];
+            
+            saveToStorage();
+            updateAdminPanel();
+            
+            // Send WhatsApp message with reason
+            const whatsappMessage = `நாம் தமிழர் கட்சி - உங்கள் வாக்காளர் பதிவு நிராகரிக்கப்பட்டது.⚠️\n\n` +
+                                  `அடையாள எண்: ${regId}\n` +
+                                  `நிலை: நிராகரிக்கப்பட்டது\n` +
+                                  `காரணம்: ${reason}\n\n` +
+                                  `தயவு செய்து சரியான ஆவணங்களுடன் மீண்டும் விண்ணப்பிக்கவும்.\n` +
+                                  `- நாம் தமிழர் கட்சி வாக்காளர் சேவைகள்`;
+            const whatsappUrl = `https://wa.me/91${application.mobile}?text=${encodeURIComponent(whatsappMessage)}`;
+            window.open(whatsappUrl, '_blank');
+            
+            alert('விண்ணப்பம் நிராகரிக்கப்பட்டது மற்றும் வாட்ஸ்அப் செய்தி அனுப்பப்பட்டது.');
+        }
+
+        // View voter details
+        function viewVoterDetails(voterNumber) {
+            const voter = voters[voterNumber];
+            if (!voter) return;
+            
+            const details = `
+                வாக்காளர் எண்: ${voter.voterNumber}
+                கைபேசி எண்: ${voter.mobile}
+                பதிவு தேதி: ${voter.registeredDate}
+                நிலை: அங்கீகரிக்கப்பட்டது
+            `;
+            
+            alert(details);
+        }
+
+        // Generate full report
+        async function generateFullReport() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.setTextColor(40, 167, 69);
+                doc.text('நாம் தமிழர் கட்சி - வாக்காளர் அறிக்கை', 105, 20, { align: 'center' });
+                
+                // Add date
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`அறிக்கை தேதி: ${new Date().toLocaleString('ta-IN')}`, 105, 30, { align: 'center' });
+                
+                let yPos = 50;
+                
+                // Statistics
+                doc.setFontSize(16);
+                doc.text('புள்ளிவிவரங்கள்:', 20, yPos);
+                yPos += 10;
+                
+                doc.setFontSize(12);
+                doc.text(`மொத்த பதிவுகள்: ${Object.keys(voters).length}`, 30, yPos);
+                yPos += 8;
+                doc.text(`நிலுவை விண்ணப்பங்கள்: ${Object.keys(pendingApplications).length}`, 30, yPos);
+                yPos += 8;
+                doc.text(`நிராகரிக்கப்பட்டவை: ${Object.keys(rejectedApplications).length}`, 30, yPos);
+                yPos += 15;
+                
+                // Approved voters
+                doc.setFontSize(16);
+                doc.text('அங்கீகரிக்கப்பட்ட வாக்காளர்கள்:', 20, yPos);
+                yPos += 10;
+                
+                doc.setFontSize(10);
+                const votersArray = Object.values(voters);
+                if (votersArray.length > 0) {
+                    votersArray.forEach((voter, index) => {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(`${index + 1}. ${voter.voterNumber} - ${voter.mobile} - ${voter.registeredDate}`, 30, yPos);
+                        yPos += 7;
+                    });
+                } else {
+                    doc.text('அங்கீகரிக்கப்பட்ட வாக்காளர்கள் இல்லை', 30, yPos);
+                    yPos += 7;
+                }
+                
+                // Pending applications
+                yPos += 10;
+                if (yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+                doc.setFontSize(16);
+                doc.text('நிலுவை விண்ணப்பங்கள்:', 20, yPos);
+                yPos += 10;
+                
+                doc.setFontSize(10);
+                const pendingArray = Object.values(pendingApplications);
+                if (pendingArray.length > 0) {
+                    pendingArray.forEach((app, index) => {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                        }
+                        doc.text(`${index + 1}. ${app.registrationId} - ${app.voterNumber} - ${app.submittedDate}`, 30, yPos);
+                        yPos += 7;
+                    });
+                } else {
+                    doc.text('நிலுவை விண்ணப்பங்கள் இல்லை', 30, yPos);
+                    yPos += 7;
+                }
+                
+                // Save the PDF
+                doc.save(`நாம்_தமிழர்_கட்சி_அறிக்கை_${new Date().getTime()}.pdf`);
+                
+                alert('PDF அறிக்கை பதிவிறக்கம் செய்யப்பட்டது.');
+            } catch (error) {
+                console.error('Error generating report:', error);
+                alert('அறிக்கை உருவாக்குவதில் பிழை.');
+            }
+        }
+
+        // Export all voters to PDF
+        async function exportAllVotersPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(20);
+                doc.setTextColor(40, 167, 69);
+                doc.text('நாம் தமிழர் கட்சி - அங்கீகரிக்கப்பட்ட வாக்காளர்கள்', 105, 20, { align: 'center' });
+                
+                // Add date
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`அறிக்கை தேதி: ${new Date().toLocaleString('ta-IN')}`, 105, 30, { align: 'center' });
+                
+                // Table headers
+                doc.setFontSize(10);
+                doc.setFillColor(240, 240, 240);
+                doc.rect(20, 40, 170, 10, 'F');
+                doc.text('வ.எண்', 25, 46);
+                doc.text('வாக்காளர் எண்', 50, 46);
+                doc.text('கைபேசி எண்', 90, 46);
+                doc.text('பதிவு தேதி', 130, 46);
+                doc.text('நிலை', 170, 46);
+                
+                let yPos = 55;
+                const votersArray = Object.values(voters);
+                
+                if (votersArray.length === 0) {
+                    doc.text('அங்கீகரிக்கப்பட்ட வாக்காளர்கள் இல்லை', 105, yPos, { align: 'center' });
+                } else {
+                    votersArray.forEach((voter, index) => {
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                            // Add headers again
+                            doc.setFillColor(240, 240, 240);
+                            doc.rect(20, 20, 170, 10, 'F');
+                            doc.text('வ.எண்', 25, 26);
+                            doc.text('வாக்காளர் எண்', 50, 26);
+                            doc.text('கைபேசி எண்', 90, 26);
+                            doc.text('பதிவு தேதி', 130, 26);
+                            doc.text('நிலை', 170, 26);
+                            yPos = 35;
+                        }
+                        
+                        doc.text((index + 1).toString(), 25, yPos);
+                        doc.text(voter.voterNumber, 50, yPos);
+                        doc.text(voter.mobile, 90, yPos);
+                        doc.text(voter.registeredDate, 130, yPos);
+                        doc.text('அங்கீகரிக்கப்பட்டது', 170, yPos);
+                        yPos += 10;
+                    });
+                }
+                
+                // Save the PDF
+                doc.save(`நாம்_தமிழர்_கட்சி_வாக்காளர்கள்_${new Date().getTime()}.pdf`);
+                
+                alert('வாக்காளர் பட்டியல் PDF பதிவிறக்கம் செய்யப்பட்டது.');
+            } catch (error) {
+                console.error('Error exporting voters:', error);
+                alert('PDF ஏற்றுமதியில் பிழை.');
+            }
+        }
+
+        // Make functions globally available
+        window.handleApprove = handleApprove;
+        window.showRejectionModal = showRejectionModal;
+        window.viewVoterDetails = viewVoterDetails;
+        window.showAdminPanel = showAdminPanel;
+    </script>
+</body>
+</html>
